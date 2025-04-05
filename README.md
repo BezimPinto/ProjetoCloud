@@ -1,2 +1,91 @@
-# ProjetoCloud
- 
+# Binance Trading Bot API
+
+This is a FastAPI-based REST API for managing a Binance trading bot. The API provides endpoints for user management, configuration, and tracking tickers.
+
+## Setup
+
+1. Create a virtual environment and activate it:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Create a `.env` file in the root directory with the following content:
+```
+DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/binance_trading_bot
+SECRET_KEY=your_secret_key_here
+ALGORITHM=HS256
+```
+
+Replace `your_password` with your MySQL password and generate a secure `SECRET_KEY`.
+
+4. Run the application:
+```bash
+uvicorn main:app --reload
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /token` - Get access token (login)
+
+### User Management
+- `POST /users/` - Create new user
+- `GET /users/me/` - Get current user info
+
+### User Configuration
+- `POST /users/me/configuration/` - Create user configuration
+- `GET /users/me/configuration/` - Get user configuration
+
+### Tracking Tickers
+- `POST /users/me/tracking-tickers/` - Add new tracking ticker
+- `GET /users/me/tracking-tickers/` - Get all tracking tickers
+- `DELETE /users/me/tracking-tickers/{ticker_id}` - Delete a tracking ticker
+
+## API Documentation
+
+Once the application is running, you can access:
+- Interactive API documentation at: `http://localhost:8000/docs`
+- Alternative API documentation at: `http://localhost:8000/redoc`
+
+## Example Usage
+
+1. Create a new user:
+```bash
+curl -X POST "http://localhost:8000/users/" -H "Content-Type: application/json" -d '{
+  "login": "user@example.com",
+  "password": "strongpassword",
+  "binanceApiKey": "your-binance-api-key",
+  "binanceSecretKey": "your-binance-secret-key",
+  "saldoInicio": 1000.0
+}'
+```
+
+2. Get access token:
+```bash
+curl -X POST "http://localhost:8000/token" -d "username=user@example.com&password=strongpassword"
+```
+
+3. Create user configuration (requires authentication):
+```bash
+curl -X POST "http://localhost:8000/users/me/configuration/" \
+  -H "Authorization: Bearer your-access-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lossPercent": 2.0,
+    "profitPercent": 1.5,
+    "quantityPerOrder": 100.0
+  }'
+```
+
+## Security Notes
+
+1. Always use HTTPS in production
+2. Store API keys securely
+3. Use strong passwords
+4. Keep your `.env` file secure and never commit it to version control 
