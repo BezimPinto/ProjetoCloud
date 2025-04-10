@@ -46,28 +46,29 @@ uvicorn main:app --reload
 - `GET /users/{user_id}/configurations/` - Obter configuração de um usuário específico
 
 ### Rastreamento de Tickets
-- `POST /users/me/tracking-tickers/` - Add new tracking ticker
-- `GET /users/me/tracking-tickers/` - Get all tracking tickers
+- `POST /users/me/tracking-tickers/` - Adicionar novo ticker para rastreamento
+- `GET /users/me/tracking-tickers/` - Obter todos os tickers rastreados
 - `DELETE /users/me/tracking-tickers/{ticker_id}` - Excluir um ticker rastreado
-- `POST /users/{user_id}/configurations/` - Criar configuração para um usuário específico
-- `GET /users/{user_id}/configurations/` - Obter configuração de um usuário específico
+- `POST /users/{user_id}/tracking-tickers/`- Adicionar ticker para um usuário específico
+- `GET /users/{user_id}/tracking-tickers/` - Obter tickers de um usuário específico
 - `DELETE /users/{user_id}/tracking-tickers/{ticker_id}` - Excluir ticker de um usuário específico
+
+### Transações
 - `POST /users/{user_id}/transactions/` - Criar nova transação
-- `GET /users/{user_id}/transactions/` - Obter transações de um usuário
+- `GET /users/{user_id}/transactions/` - Obter transações de um usuário (com filtros de data opcional)
 
 ### Relatórios de Desempenho
 - `GET /users/me/reports/` - Obter relatórios de desempenho do usuário atual
-- `POST /users/me/reports/generate/` - Gerar um novo relatório de desempenho
 
 ### Dados de Mercado
 - `GET /prices/{symbol}` - Obter preço atual de um símbolo
 - `GET /prices/klines/{symbol}` - Obter dados históricos (candles) de um símbolo
 
-## API Documentation
+### Documentação da API
+Uma vez que a aplicação esteja em execução, você pode acessar:
 
-Once the application is running, you can access:
-- Interactive API documentation at: `http://localhost:8000/docs`
-- Alternative API documentation at: `http://localhost:8000/redoc`
+- Documentação interativa da API em: `http://localhost:8000/docs`
+- Documentação alternativa da API em: `http://localhost:8000/redoc`
 
 ## Example Usage
 
