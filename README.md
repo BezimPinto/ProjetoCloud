@@ -55,9 +55,13 @@ uvicorn main:app --reload
 - `POST /users/{user_id}/transactions/` - Criar nova transação
 - `GET /users/{user_id}/transactions/` - Obter transações de um usuário
 
-  ### Relatórios de Desempenho
-  - `GET /users/me/reports/` - Obter relatórios de desempenho do usuário atual
-  - `POST /users/me/reports/generate/` - Gerar um novo relatório de desempenho
+### Relatórios de Desempenho
+- `GET /users/me/reports/` - Obter relatórios de desempenho do usuário atual
+- `POST /users/me/reports/generate/` - Gerar um novo relatório de desempenho
+
+### Dados de Mercado
+- `GET /prices/{symbol}` - Obter preço atual de um símbolo
+- `GET /prices/klines/{symbol}` - Obter dados históricos (candles) de um símbolo
 
 ## API Documentation
 
