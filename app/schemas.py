@@ -30,10 +30,15 @@ class UserTrackingTicker(UserTrackingTickerBase):
     class Config:
         from_attributes = True
 
+class TransactionRequest(BaseModel):
+    symbol: str
+    side: str
+    valorTotal: float
+
 class TransactionBase(BaseModel):
     symbol: str
     side: str
-    quantity: float
+    valorTotal: float
     price: float
     stop_loss: Optional[float] = None
     take_profit: Optional[float] = None
@@ -47,6 +52,7 @@ class Transaction(TransactionBase):
     id_usuario: int
     is_completed: bool
     profit_loss: Optional[float] = None
+    quantity: float
 
     class Config:
         from_attributes = True
@@ -74,16 +80,17 @@ class UserBase(BaseModel):
     login: str
     binanceApiKey: str
     binanceSecretKey: str
-    saldoInicio: Optional[float] = None
 
     class Config:
         from_attributes = True
 
 class UserCreate(UserBase):
     password: str
+    saldoInicio: Optional[float] = None
 
 class User(UserBase):
     id: int
+    saldoInicio: Optional[float] = None
     configurations: List[UserConfiguration] = []
     tracking_tickers: List[UserTrackingTicker] = []
     transactions: List[Transaction] = []

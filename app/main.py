@@ -21,7 +21,7 @@ def get_db():
 
 # Usuário padrão com suas chaves da Binance
 DEFAULT_USER = {
-    "id": 1,
+    "id": 100,
     "login": "default_user",
     "binanceApiKey": "RfX5oncCDt1OVR4Ld1btOqKIzai9tqPTZtERnRhXbeDqLnT73ngluWf0TpNAuRhY",
     "binanceSecretKey": "TQKNXzHWVVXlA5yvn9qh3PoCqLkUjCkH0hTMS33tCfdt1hXBFPgEMOokqOlySUsP",
@@ -30,6 +30,7 @@ DEFAULT_USER = {
 
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    print(user.login)
     try:
         db_user = repository.UserRepository.get_user_by_login(db, login=user.login)
         if db_user:
@@ -42,85 +43,135 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             detail=f"An error occurred while creating the user: {str(e)}"
         )
 
-@app.post("/users/me/configuration/", response_model=schemas.UserConfiguration)
+@app.post("/users/{user_id}/configurations/", response_model=schemas.UserConfiguration)
 async def create_user_configuration(
+    user_id: int,
     config: schemas.UserConfigurationCreate,
     db: Session = Depends(get_db)
 ):
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     return repository.UserConfigurationRepository.create_user_configuration(
-        db=db, config=config, user_id=DEFAULT_USER["id"]
+        db=db, config=config, user_id=user_id
     )
 
-@app.get("/users/me/configuration/", response_model=schemas.UserConfiguration)
+@app.get("/users/{user_id}/configurations/", response_model=schemas.UserConfiguration)
 async def get_user_configuration(
+    user_id: int,
     db: Session = Depends(get_db)
 ):
-    config = repository.UserConfigurationRepository.get_user_configuration(db, DEFAULT_USER["id"])
+    config = repository.UserConfigurationRepository.get_user_configuration(db, user_id)
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
     return config
 
-@app.post("/users/me/tracking-tickers/", response_model=schemas.UserTrackingTicker)
+@app.post("/users/{user_id}/tracking-tickers/", response_model=schemas.UserTrackingTicker)
 async def create_tracking_ticker(
+    user_id: int,
     ticker: schemas.UserTrackingTickerCreate,
     db: Session = Depends(get_db)
 ):
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     return repository.UserTrackingTickerRepository.create_tracking_ticker(
-        db=db, ticker=ticker, user_id=DEFAULT_USER["id"]
+        db=db, ticker=ticker, user_id=user_id
     )
 
-@app.get("/users/me/tracking-tickers/", response_model=List[schemas.UserTrackingTicker])
+@app.get("/users/{user_id}/tracking-tickers/", response_model=List[schemas.UserTrackingTicker])
 async def get_user_tracking_tickers(
+    user_id: int,
     db: Session = Depends(get_db)
 ):
-    return repository.UserTrackingTickerRepository.get_user_tickers(db, DEFAULT_USER["id"])
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return repository.UserTrackingTickerRepository.get_user_tickers(db, user_id)
 
-@app.delete("/users/me/tracking-tickers/{ticker_id}")
+@app.delete("/users/{user_id}/tracking-tickers/{ticker_id}")
 async def delete_tracking_ticker(
+    user_id: int,
     ticker_id: int,
     db: Session = Depends(get_db)
 ):
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     success = repository.UserTrackingTickerRepository.delete_tracking_ticker(
-        db, ticker_id, DEFAULT_USER["id"]
+        db, ticker_id, user_id
     )
     if not success:
         raise HTTPException(status_code=404, detail="Ticker not found")
     return {"status": "success"}
 
-@app.post("/users/me/transactions/", response_model=schemas.Transaction)
+@app.post("/users/{user_id}/transactions/", response_model=schemas.Transaction)
 async def create_transaction(
-    transaction: schemas.TransactionCreate,
+    user_id: int,
+    transaction: schemas.TransactionRequest,
     db: Session = Depends(get_db)
 ):
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     # Verifica se o usuário tem configuração
-    config = repository.UserConfigurationRepository.get_user_configuration(db, DEFAULT_USER["id"])
+    config = repository.UserConfigurationRepository.get_user_configuration(db, user_id)
     if not config:
         raise HTTPException(status_code=400, detail="User configuration not found")
 
+    # Obtém o preço atual da moeda
+    try:
+        trading = BinanceTrading(user.binanceApiKey, user.binanceSecretKey)
+        ticker = trading.client.get_symbol_ticker(symbol=transaction.symbol)
+        current_price = float(ticker['price'])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error getting price: {str(e)}")
+
+    # Calcula a quantidade com base no valorTotal e preço
+    quantity = transaction.valorTotal / current_price
+
     # Cria a transação no banco de dados
     db_transaction = repository.TransactionRepository.create_transaction(
-        db=db, transaction=transaction, user_id=DEFAULT_USER["id"]
+        db=db, 
+        transaction=schemas.TransactionCreate(
+            symbol=transaction.symbol,
+            side=transaction.side,
+            valorTotal=transaction.valorTotal,
+            price=current_price,
+            stop_loss=None,
+            take_profit=None
+        ), 
+        user_id=user_id,
+        quantity=quantity
     )
 
     # Executa a ordem na Binance
     try:
-        trading = BinanceTrading(DEFAULT_USER["binanceApiKey"], DEFAULT_USER["binanceSecretKey"])
-        
         # Calcula stop loss e take profit baseado na configuração do usuário
         stop_loss = None
         take_profit = None
         if transaction.side == "BUY":
-            stop_loss = transaction.price * (1 - config.lossPercent/100)
-            take_profit = transaction.price * (1 + config.profitPercent/100)
+            stop_loss = current_price * (1 - config.lossPercent/100)
+            take_profit = current_price * (1 + config.profitPercent/100)
         else:
-            stop_loss = transaction.price * (1 + config.lossPercent/100)
-            take_profit = transaction.price * (1 - config.profitPercent/100)
+            stop_loss = current_price * (1 + config.lossPercent/100)
+            take_profit = current_price * (1 - config.profitPercent/100)
 
         # Executa a ordem
         trading.create_order(
             symbol=transaction.symbol,
             side=transaction.side,
-            quantity=transaction.quantity,
+            quantity=quantity,
             stop_price=stop_loss,
             take_profit_price=take_profit
         )
@@ -129,14 +180,20 @@ async def create_transaction(
 
     return db_transaction
 
-@app.get("/users/me/transactions/", response_model=List[schemas.Transaction])
+@app.get("/users/{user_id}/transactions/", response_model=List[schemas.Transaction])
 async def get_user_transactions(
+    user_id: int,
     start_date: datetime = None,
     end_date: datetime = None,
     db: Session = Depends(get_db)
 ):
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     return repository.TransactionRepository.get_user_transactions(
-        db, DEFAULT_USER["id"], start_date, end_date
+        db, user_id, start_date, end_date
     )
 
 @app.get("/users/me/reports/", response_model=List[schemas.PerformanceReport])

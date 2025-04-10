@@ -26,6 +26,7 @@ class UserRepository:
             binanceSecretKey=user.binanceSecretKey,
             saldoInicio=user.saldoInicio
         )
+        print(db_user)
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
@@ -52,6 +53,24 @@ class UserRepository:
             return False
         return user
 
+    @staticmethod
+    def get_all_users(db: Session):
+        users = db.query(models.User).all()
+        return [
+            schemas.User(
+                id=user.id,
+                login=user.login,
+                binanceApiKey=user.binanceApiKey,
+                binanceSecretKey=user.binanceSecretKey,
+                saldoInicio=user.saldoInicio,
+                configurations=[],
+                tracking_tickers=[],
+                transactions=[],
+                reports=[]
+            )
+            for user in users
+        ]
+
 class UserConfigurationRepository:
     @staticmethod
     def create_user_configuration(db: Session, config: schemas.UserConfigurationCreate, user_id: int):
@@ -59,11 +78,26 @@ class UserConfigurationRepository:
         db.add(db_config)
         db.commit()
         db.refresh(db_config)
-        return db_config
+        return schemas.UserConfiguration(
+            id=db_config.id,
+            lossPercent=db_config.lossPercent,
+            profitPercent=db_config.profitPercent,
+            quantityPerOrder=db_config.quantityPerOrder,
+            id_usuario=db_config.id_usuario
+        )
 
     @staticmethod
     def get_user_configuration(db: Session, user_id: int):
-        return db.query(models.UserConfiguration).filter(models.UserConfiguration.id_usuario == user_id).first()
+        db_config = db.query(models.UserConfiguration).filter(models.UserConfiguration.id_usuario == user_id).first()
+        if db_config:
+            return schemas.UserConfiguration(
+                id=db_config.id,
+                lossPercent=db_config.lossPercent,
+                profitPercent=db_config.profitPercent,
+                quantityPerOrder=db_config.quantityPerOrder,
+                id_usuario=db_config.id_usuario
+            )
+        return None
 
 class UserTrackingTickerRepository:
     @staticmethod
@@ -72,11 +106,23 @@ class UserTrackingTickerRepository:
         db.add(db_ticker)
         db.commit()
         db.refresh(db_ticker)
-        return db_ticker
+        return schemas.UserTrackingTicker(
+            id=db_ticker.id,
+            symbol=db_ticker.symbol,
+            id_usuario=db_ticker.id_usuario
+        )
 
     @staticmethod
     def get_user_tickers(db: Session, user_id: int):
-        return db.query(models.UserTrackingTicker).filter(models.UserTrackingTicker.id_usuario == user_id).all()
+        db_tickers = db.query(models.UserTrackingTicker).filter(models.UserTrackingTicker.id_usuario == user_id).all()
+        return [
+            schemas.UserTrackingTicker(
+                id=ticker.id,
+                symbol=ticker.symbol,
+                id_usuario=ticker.id_usuario
+            )
+            for ticker in db_tickers
+        ]
 
     @staticmethod
     def delete_tracking_ticker(db: Session, ticker_id: int, user_id: int):
@@ -92,12 +138,33 @@ class UserTrackingTickerRepository:
 
 class TransactionRepository:
     @staticmethod
-    def create_transaction(db: Session, transaction: schemas.TransactionCreate, user_id: int):
-        db_transaction = models.Transaction(**transaction.dict(), id_usuario=user_id)
+    def create_transaction(db: Session, transaction: schemas.TransactionCreate, user_id: int, quantity: float):
+        db_transaction = models.Transaction(
+            symbol=transaction.symbol,
+            side=transaction.side,
+            quantity=quantity,
+            price=transaction.price,
+            stop_loss=transaction.stop_loss,
+            take_profit=transaction.take_profit,
+            id_usuario=user_id
+        )
         db.add(db_transaction)
         db.commit()
         db.refresh(db_transaction)
-        return db_transaction
+        return schemas.Transaction(
+            id=db_transaction.id,
+            symbol=db_transaction.symbol,
+            side=db_transaction.side,
+            valorTotal=db_transaction.quantity * db_transaction.price,
+            price=db_transaction.price,
+            stop_loss=db_transaction.stop_loss,
+            take_profit=db_transaction.take_profit,
+            timestamp=db_transaction.timestamp,
+            id_usuario=db_transaction.id_usuario,
+            is_completed=db_transaction.is_completed,
+            profit_loss=db_transaction.profit_loss,
+            quantity=db_transaction.quantity
+        )
 
     @staticmethod
     def get_user_transactions(db: Session, user_id: int, start_date: datetime = None, end_date: datetime = None):
@@ -108,7 +175,25 @@ class TransactionRepository:
         if end_date:
             query = query.filter(models.Transaction.timestamp <= end_date)
             
-        return query.order_by(models.Transaction.timestamp.desc()).all()
+        db_transactions = query.order_by(models.Transaction.timestamp.desc()).all()
+        
+        return [
+            schemas.Transaction(
+                id=transaction.id,
+                symbol=transaction.symbol,
+                side=transaction.side,
+                valorTotal=transaction.quantity * transaction.price,
+                price=transaction.price,
+                stop_loss=transaction.stop_loss,
+                take_profit=transaction.take_profit,
+                timestamp=transaction.timestamp,
+                id_usuario=transaction.id_usuario,
+                is_completed=transaction.is_completed,
+                profit_loss=transaction.profit_loss,
+                quantity=transaction.quantity
+            )
+            for transaction in db_transactions
+        ]
 
     @staticmethod
     def update_transaction_profit(db: Session, transaction_id: int, profit_loss: float):
