@@ -57,7 +57,7 @@ uvicorn main:app --reload
 
   ### Relatórios de Desempenho
   - `GET /users/me/reports/` - Obter relatórios de desempenho do usuário atual
-  - 
+  - `POST /users/me/reports/generate/` - Gerar um novo relatório de desempenho
 
 ## API Documentation
 
