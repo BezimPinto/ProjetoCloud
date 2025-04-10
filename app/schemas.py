@@ -57,6 +57,11 @@ class Transaction(TransactionBase):
     class Config:
         from_attributes = True
 
+# Novo schema para enriquecer a resposta de transações
+class TransactionResponse(Transaction):
+    current_value: float  # Valor atual (quantity * cotação atual)
+    traded_coin: str      # Símbolo da moeda negociada
+
 class PerformanceReportBase(BaseModel):
     start_date: datetime
     end_date: datetime
@@ -104,4 +109,4 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    username: Optional[str] = None 
+    username: Optional[str] = None

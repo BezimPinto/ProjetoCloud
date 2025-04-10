@@ -24,7 +24,7 @@ class UserRepository:
             password=hashed_password,
             binanceApiKey=user.binanceApiKey,
             binanceSecretKey=user.binanceSecretKey,
-            saldoInicio=user.saldoInicio
+            #saldoInicio=user.saldoInicio
         )
         print(db_user)
         db.add(db_user)
@@ -70,6 +70,15 @@ class UserRepository:
             )
             for user in users
         ]
+    
+    @staticmethod
+    def delete_user(db: Session, user_id: int):
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user:
+            return None
+        db.delete(user)
+        db.commit()
+        return user
 
 class UserConfigurationRepository:
     @staticmethod
@@ -242,4 +251,4 @@ class PerformanceReportRepository:
             win_rate=win_rate
         )
         
-        return PerformanceReportRepository.create_report(db, report, user_id) 
+        return PerformanceReportRepository.create_report(db, report, user_id)

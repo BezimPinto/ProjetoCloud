@@ -42,6 +42,15 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             status_code=500,
             detail=f"An error occurred while creating the user: {str(e)}"
         )
+@app.delete("/users/{user_id}", response_model=dict)
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    repository.UserRepository.delete_user(db, user_id)
+    return {"status": "success", "message": f"User with ID {user_id} deleted."}
+
 
 @app.post("/users/{user_id}/configurations/", response_model=schemas.UserConfiguration)
 async def create_user_configuration(
@@ -124,12 +133,12 @@ async def create_transaction(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Verifica se o usuário tem configuração
+    # Verifica se o usuário possui configurações definidas
     config = repository.UserConfigurationRepository.get_user_configuration(db, user_id)
     if not config:
         raise HTTPException(status_code=400, detail="User configuration not found")
 
-    # Obtém o preço atual da moeda
+    # Obtém o preço atual do ativo
     try:
         trading = BinanceTrading(user.binanceApiKey, user.binanceSecretKey)
         ticker = trading.client.get_symbol_ticker(symbol=transaction.symbol)
@@ -137,12 +146,27 @@ async def create_transaction(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error getting price: {str(e)}")
 
-    # Calcula a quantidade com base no valorTotal e preço
+    # Calcula a quantidade com base no valor total e no preço atual
     quantity = transaction.valorTotal / current_price
 
-    # Cria a transação no banco de dados
+    # Validação: se for SELL, não permitir vender mais do que a quantidade disponível
+    if transaction.side.upper() == "SELL":
+        # Recupera todas as transações já realizadas pelo usuário
+        transactions = repository.TransactionRepository.get_user_transactions(db, user_id)
+        # Calcula a posição líquida: soma das compras menos soma das vendas
+        net_quantity = sum(
+            t.quantity if t.side.upper() == "BUY" else -t.quantity
+            for t in transactions
+        )
+        if quantity > net_quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Quantidade para SELL ({quantity:.4f}) excede a posição disponível ({net_quantity:.4f})."
+            )
+
+    # Cria a transação no banco de dados (com base em schemas.TransactionCreate)
     db_transaction = repository.TransactionRepository.create_transaction(
-        db=db, 
+        db=db,
         transaction=schemas.TransactionCreate(
             symbol=transaction.symbol,
             side=transaction.side,
@@ -150,24 +174,21 @@ async def create_transaction(
             price=current_price,
             stop_loss=None,
             take_profit=None
-        ), 
+        ),
         user_id=user_id,
         quantity=quantity
     )
 
-    # Executa a ordem na Binance
+    # Executa a ordem na Binance com os parâmetros adequados
     try:
         # Calcula stop loss e take profit baseado na configuração do usuário
-        stop_loss = None
-        take_profit = None
-        if transaction.side == "BUY":
+        if transaction.side.upper() == "BUY":
             stop_loss = current_price * (1 - config.lossPercent/100)
             take_profit = current_price * (1 + config.profitPercent/100)
-        else:
+        else:  # SELL
             stop_loss = current_price * (1 + config.lossPercent/100)
             take_profit = current_price * (1 - config.profitPercent/100)
 
-        # Executa a ordem
         trading.create_order(
             symbol=transaction.symbol,
             side=transaction.side,
@@ -180,7 +201,8 @@ async def create_transaction(
 
     return db_transaction
 
-@app.get("/users/{user_id}/transactions/", response_model=List[schemas.Transaction])
+
+@app.get("/users/{user_id}/transactions/", response_model=List[schemas.TransactionResponse])
 async def get_user_transactions(
     user_id: int,
     start_date: datetime = None,
@@ -192,28 +214,52 @@ async def get_user_transactions(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return repository.TransactionRepository.get_user_transactions(
-        db, user_id, start_date, end_date
-    )
+    transactions = repository.TransactionRepository.get_user_transactions(db, user_id, start_date, end_date)
+    
+    # Cria uma instância do cliente Binance usando as chaves do usuário para obter a cotação atual
+    trading = BinanceTrading(user.binanceApiKey, user.binanceSecretKey)
+    
+    enriched_transactions = []
+    for t in transactions:
+        try:
+            ticker = trading.client.get_symbol_ticker(symbol=t.symbol)
+            current_price = float(ticker['price'])
+        except Exception as e:
+            current_price = 0.0
+        # Calcula o valor atual de cada transação com base na quantidade negociada
+        current_value = t.quantity * current_price
+        # Define a moeda negociada; neste exemplo, usamos o símbolo completo
+        traded_coin = t.symbol
+        enriched_transaction = {**t.dict(), "current_value": current_value, "traded_coin": traded_coin}
+        enriched_transactions.append(enriched_transaction)
+    
+    return enriched_transactions
 
-@app.get("/users/me/reports/", response_model=List[schemas.PerformanceReport])
-async def get_user_reports(
-    limit: int = 10,
-    db: Session = Depends(get_db)
-):
-    return repository.PerformanceReportRepository.get_user_reports(
-        db, DEFAULT_USER["id"], limit
-    )
 
-@app.post("/users/me/reports/generate/", response_model=schemas.PerformanceReport)
-async def generate_report(
-    start_date: datetime,
-    end_date: datetime,
-    db: Session = Depends(get_db)
-):
-    return repository.PerformanceReportRepository.generate_report(
-        db, DEFAULT_USER["id"], start_date, end_date
-    )
+@app.get("/users/{user_id}/net-quantity/")
+async def get_net_quantity(user_id: int, db: Session = Depends(get_db)):
+    # Verifica se o usuário existe
+    user = repository.UserRepository.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Recupera todas as transações do usuário
+    transactions = repository.TransactionRepository.get_user_transactions(db, user_id)
+    
+    net_quantity = 0.0
+    # Para cada transação, se for BUY soma a quantidade, se for SELL subtrai a quantidade
+    for t in transactions:
+        if t.side.upper() == "BUY":
+            net_quantity += t.quantity
+        elif t.side.upper() == "SELL":
+            net_quantity -= t.quantity
+    
+    return {
+        "user_id": user_id,
+        "net_quantity": net_quantity,
+        "total_transactions": len(transactions)
+    }
+
 
 @app.get("/prices/{symbol}")
 async def get_price(
@@ -265,4 +311,4 @@ async def get_klines(
             "klines": klines
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) 
+        raise HTTPException(status_code=400, detail=str(e))
