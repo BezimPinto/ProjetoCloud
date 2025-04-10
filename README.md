@@ -48,7 +48,9 @@ uvicorn main:app --reload
 ### Rastreamento de Tickets
 - `POST /users/me/tracking-tickers/` - Add new tracking ticker
 - `GET /users/me/tracking-tickers/` - Get all tracking tickers
-- `DELETE /users/me/tracking-tickers/{ticker_id}` - Delete a tracking ticker
+- `DELETE /users/me/tracking-tickers/{ticker_id}` - Excluir um ticker rastreado
+- POST /users/{user_id}/configurations/ - Criar configuração para um usuário específico
+- GET /users/{user_id}/configurations/ - Obter configuração de um usuário específico
 
 ## API Documentation
 
