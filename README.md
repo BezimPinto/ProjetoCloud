@@ -1,6 +1,6 @@
 # Binance Trading Bot API
 
-This is a FastAPI-based REST API for managing a Binance trading bot. The API provides endpoints for user management, configuration, and tracking tickers.
+Esta é uma API REST baseada em FastAPI para gerenciar um bot de trading na Binance. A API fornece endpoints para gerenciamento de usuários, configuração, rastreamento de tickers, transações e relatórios de desempenho.
 
 ## Setup
 
@@ -31,18 +31,21 @@ uvicorn main:app --reload
 
 ## API Endpoints
 
-### Authentication
-- `POST /token` - Get access token (login)
+### Autenticação
+- `POST /token` - Obter token de acesso (login)
 
-### User Management
-- `POST /users/` - Create new user
-- `GET /users/me/` - Get current user info
+### Gerenciamento de Usuários
+- `POST /users/` - Criar novo usuário
+- `GET /users/me/` - Obter informações do usuário atual
+- `GET /users/{user_id}` - Obter informações de um usuário específico
 
-### User Configuration
-- `POST /users/me/configuration/` - Create user configuration
-- `GET /users/me/configuration/` - Get user configuration
+### Configuração do Usuário
+- `POST /users/me/configuration/` - Criar configuração do usuário
+- `GET /users/me/configuration/` - Obter configuração do usuário
+- `POST /users/{user_id}/configurations/` - Criar configuração para um usuário específico
+- `GET /users/{user_id}/configurations/` - Obter configuração de um usuário específico
 
-### Tracking Tickers
+### Rastreamento de Tickets
 - `POST /users/me/tracking-tickers/` - Add new tracking ticker
 - `GET /users/me/tracking-tickers/` - Get all tracking tickers
 - `DELETE /users/me/tracking-tickers/{ticker_id}` - Delete a tracking ticker
