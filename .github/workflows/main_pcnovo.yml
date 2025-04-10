@@ -2,7 +2,7 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - projetocloudppweb
+name: Build and deploy Python app to Azure Web App - PCNOVO
 
 on:
   push:
@@ -68,14 +68,14 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_21538A64295346ABAC0833B64FF90752 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_22C823D57C224DA8B8335EA49B5EEB26 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BDB8AA1E226A4F33AABE003CB9A37614 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3B82F1CB7BC54B3F90C2144A4883653A }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_71266A4862A44C9288FB14DEB8BA951C }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1267138976E6449386161680261D6872 }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'projetocloudppweb'
+          app-name: 'PCNOVO'
           slot-name: 'Production'
           
