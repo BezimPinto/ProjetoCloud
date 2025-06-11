@@ -51,7 +51,7 @@ async def delete_user(user_id: int, db: Session = Depends(get_db)):
     repository.UserRepository.delete_user(db, user_id)
     return {"status": "success", "message": f"User with ID {user_id} deleted."}
 
-
+#teste
 @app.post("/users/{user_id}/configurations/", response_model=schemas.UserConfiguration)
 async def create_user_configuration(
     user_id: int,
