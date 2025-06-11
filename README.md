@@ -38,6 +38,7 @@ uvicorn main:app --reload
 - `POST /users/` - Criar novo usuário
 - `GET /users/me/` - Obter informações do usuário atual
 - `GET /users/{user_id}` - Obter informações de um usuário específico
+#teste
 
 ### Configuração do Usuário
 - `POST /users/me/configuration/` - Criar configuração do usuário

@@ -16,5 +16,5 @@ COPY . .
 # Expõe a porta usada pelo Uvicorn
 EXPOSE 8000
 
-# Comando para rodar a aplicação
+# Comando para rodar a aplicação 
 CMD ["python", "run.py"]
