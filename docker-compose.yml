@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: binance_trading_bot
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  app:
+    build: .
+    container_name: dockerpc
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: mysql+pymysql://user:password@db:3306/binance_trading_bot?ssl_disabled=true
+      SECRET_KEY: 1234
+      ALGORITHM: HS256
+    ports:
+      - "8000:8000"
+    command: python run.py
+
+volumes:
+  db_data:
