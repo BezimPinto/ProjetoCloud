@@ -2,6 +2,13 @@
 
 Esta é uma API REST baseada em FastAPI para gerenciar um bot de trading na Binance. A API fornece endpoints para gerenciamento de usuários, configuração, rastreamento de tickers, transações e relatórios de desempenho.
 
+## Alunos
+|Matrícula | Aluno |
+| -- | -- |
+| 202208385036 | Bernardo Pinto |
+| 202307164641 | Gabriel Mendes |
+| 202208385011 | Matheus Peçanha |
+
 ## Setup
 
 1. Create a virtual environment and activate it:
